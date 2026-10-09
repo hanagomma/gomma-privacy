@@ -1,0 +1,10 @@
+# 실제 거래처 자료는 저장소에 올리지 않는다 (가상 샘플만 허용)
+input/
+output/
+*.xlsx
+*.xls
+*.csv
+!samples/*.xlsx
+!samples/*.xls
+!templates/*.xls
+__pycache__/

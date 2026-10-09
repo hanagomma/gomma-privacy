@@ -1,0 +1,6 @@
+{
+  "_설명": "이 거래처에만 적용할 규칙. Claude가 작업하면서 사용자 답변을 여기에 기록한다.",
+  "name_aliases": {},
+  "review_keywords": [],
+  "extra_rules": []
+}
