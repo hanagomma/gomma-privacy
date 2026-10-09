@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|WebFetch|WebSearch|Artifact|ArtifactData|ArtifactComments|SendMessage|mcp__github__.*|mcp__Gmail__.*|mcp__Claude_Docs__.*|mcp__Canva__.*|mcp__claude-code-remote__send_message|mcp__claude-code-remote__create_session|mcp__claude-code-remote__create_trigger",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR/journal_automation/privacy_check.py\" --hook",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}
