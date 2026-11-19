@@ -120,8 +120,10 @@
       }
       return '';
     }
-    res.name = labelValue(/^상호/);
-    res.rep = labelValue(/^(성명|대표자)/);
+    var tidy = function (v) { v = String(v || '').trim(); return /^[가-힣](\s*[가-힣]){1,4}$/.test(v) ? v.replace(/\s+/g, '') : v.replace(/\s+/g, ' '); };
+    res.name = tidy(labelValue(/^상호/));
+    res.rep = tidy(labelValue(/^(성명|대표자)/));
+    if (!res.name && res.rep) { res.name = res.rep; res.notes.push('상호 칸이 비어 성명으로 표시'); }
 
     // 작성일
     res.date = findDate(g, r0, r1, res);
@@ -133,13 +135,18 @@
     var supI = items ? items.sup : 0, vatI = items ? items.vat : 0;
     if (items && (supI || vatI)) {
       res.sup = supI; res.vat = vatI; res.src = '품목';
-      if (dig && (dig.sup || dig.vat) && (dig.sup !== supI || dig.vat !== vatI)) res.notes.push('자릿수칸 금액 불일치');
+      if (dig && (dig.sup || dig.vat) && (Math.abs(dig.sup - supI) > 1 || Math.abs(dig.vat - vatI) > 1)) res.notes.push('자릿수칸 금액 불일치');
     } else if (dig && (dig.sup || dig.vat)) {
       res.sup = dig.sup; res.vat = dig.vat; res.src = '자릿수칸';
     } else {
       var tot = labeledAmount(g, r0, r1);
       res.sup = tot.sup; res.vat = tot.vat; res.src = tot.sup || tot.vat ? '금액칸' : '';
     }
+    var rawS = res.sup || 0, rawV = res.vat || 0;
+    res.sup = Math.round(rawS); res.vat = Math.round(rawV);
+    var total = grandTotal(g, r0, r1);
+    if ((rawS % 1 || rawV % 1) && total && res.sup + res.vat !== total && Math.abs(res.sup + res.vat - total) <= 2) res.vat = total - res.sup;
+    if ((rawS % 1 || rawV % 1) && (res.sup || res.vat)) res.notes.push('소수점 금액을 원 단위로 맞춤');
     if (!res.date && items && items.firstMD) res.dateMD = items.firstMD;
     res.copy = /공급받는자보관/.test(b.title) ? '공급받는자' : (/공급자보관/.test(b.title) ? '공급자' : '');
     return res;
@@ -214,9 +221,15 @@
         if (!empty(rr[cP])) names.push(String(rr[cP]).trim());
         if (!firstMD && cM >= 0) { var mm = toNum(rr[cM]); if (mm >= 1 && mm <= 12) firstMD = { m: mm, d: toNum(rr[cD]) || 1 }; }
       }
-      return { sup: Math.round(sup), vat: Math.round(vat), names: names, firstMD: firstMD };
+      return { sup: sup, vat: vat, names: names, firstMD: firstMD };
     }
     return null;
+  }
+
+  function grandTotal(g, r0, r1) {
+    var cs = findCells(g, r0, r1, function (n) { return /^합계금액/.test(n); });
+    for (var i = 0; i < cs.length; i++) for (var k = 1; k <= 2; k++) { var n = toNum(cell(g, cs[i].r + k, cs[i].c)); if (n) return Math.round(n); }
+    return 0;
   }
 
   // 상단 자릿수칸 (공급가액 | 세액 머리 아래 숫자칸 이어붙이기)
@@ -289,7 +302,7 @@
   function parseWorkbook(wb, fileName) {
     var own = parseOwnOutput(wb, fileName);
     if (own) return own;
-    var out = [], dupCount = 0, seen = {};
+    var out = [], dupCount = 0, seen = {}, blank = 0;
     wb.SheetNames.forEach(function (sn) {
       var ws = wb.Sheets[sn];
       if (ws && ws['!state'] === 'hidden') return;
@@ -302,7 +315,7 @@
       blocks.forEach(function (b) {
         var inv = parseBlock(g, b);
         if (!inv) return;
-        if (!inv.sup && !inv.vat) return; // 빈 양식
+        if (!inv.sup && !inv.vat) { blank++; return; } // 빈 양식
         if (!inv.date && inv.dateMD) inv.dateGuess = inv.dateMD;
         inv.file = fileName; inv.sheet = sn;
         var dkey = inv.date ? inv.date.y + '-' + inv.date.m + '-' + inv.date.d : 'nodate:' + sn;
@@ -312,7 +325,7 @@
         out.push(inv);
       });
     });
-    return { invoices: out, dup: dupCount };
+    return { invoices: out, dup: dupCount, blank: blank };
   }
 
   function decodeName(bytes) {
@@ -345,9 +358,10 @@
   function process(parsedFiles, opts) {
     opts = opts || {};
     var today = opts.today || new Date();
-    var all = [], skipped = [], dupTotal = 0, errors = [], ownFiles = [];
+    var all = [], skipped = [], dupTotal = 0, errors = [], ownFiles = [], blankTotal = 0;
     parsedFiles.forEach(function (pf) {
       if (pf.error) { errors.push(pf.name + ' (' + pf.error + ')'); return; }
+      blankTotal += pf.blank || 0;
       if (!pf.invoices.length) { skipped.push(pf.name); return; }
       if (pf.ownOutput) ownFiles.push(pf.name.split('/').pop() + ' (' + pf.invoices.length + '장)');
       dupTotal += pf.dup; all = all.concat(pf.invoices);
@@ -407,6 +421,7 @@
       else cross[k] = inv.file;
     });
     ownFiles.forEach(function (f) { add(notes, '집계표(사진 판독분 등)의 전체명세에서 가져옴', f); });
+    if (blankTotal) add(notes, '금액이 비어 있거나 0원인 양식 제외', blankTotal + '장');
     if (dupTotal) add(notes, '같은 파일 안의 사본(보관용 2벌 등) 제외', dupTotal + '장');
 
     list.sort(function (a, b) { return (a.name || '').localeCompare(b.name || '', 'ko'); });

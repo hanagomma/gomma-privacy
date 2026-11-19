@@ -212,7 +212,7 @@
       w+='</ul><p style="margin-top:8px;color:#7a5320">숫자는 원본대로 반영했습니다. 위 항목은 원본을 확인한 뒤 신고에 반영하세요.</p></div>';
     }
     var nb='';
-    R.notes.forEach(function(g){nb+='· 참고: ['+esc(g.kind)+'] '+(/사본|가져옴/.test(g.kind)?esc(g.samples.join(', ')):g.count+'건')+'<br>';});
+    R.notes.forEach(function(g){nb+='· 참고: ['+esc(g.kind)+'] '+(/사본|가져옴|0원인 양식/.test(g.kind)?esc(g.samples.join(', ')):g.count+'건')+'<br>';});
     if(R.skipped.length) nb+='· 세금계산서 내용이 없어 제외한 파일 '+R.skipped.length+'개: '+esc(R.skipped.map(function(x){return x.split('/').pop();}).join(', '))+'<br>';
     if(R.errors.length) nb+='· 열 수 없는 파일 '+R.errors.length+'개: '+esc(R.errors.join(', '))+'<br>';
     if(R.images.length) nb+='· 사진·PDF '+R.images.length+'개는 읽지 않았습니다(담당자 직접 확인 대상).';
