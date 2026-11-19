@@ -89,6 +89,7 @@
       </ul>
       <ul>
         <li>보관용 2벌(공급자/공급받는자)과 빈 양식, 사무소 요약본은 자동으로 빠집니다.</li>
+        <li><b>사진 판독분 합치기</b>: 사진을 판독해 만든 집계 엑셀(이 도구 양식)을 거래처 엑셀과 함께 올리면, 그 안의 <b>전체명세</b>를 읽어 한 집계표로 합칩니다.</li>
         <li>금액은 <b>품목 줄의 공급가액·세액 합계</b>를 먼저 쓰고, 품목 줄이 비어 있으면 상단 자릿수칸을 읽습니다. 둘이 다르면 "참고"에 표시합니다.</li>
         <li>경고가 나와도 집계 숫자는 원본 그대로입니다. 경고는 사람이 한 번 봐 달라는 표시입니다.</li>
       </ul>
@@ -211,7 +212,7 @@
       w+='</ul><p style="margin-top:8px;color:#7a5320">숫자는 원본대로 반영했습니다. 위 항목은 원본을 확인한 뒤 신고에 반영하세요.</p></div>';
     }
     var nb='';
-    R.notes.forEach(function(g){nb+='· 참고: ['+esc(g.kind)+'] '+(g.kind.indexOf('사본')>=0?esc(g.samples[0]||''):g.count+'건')+'<br>';});
+    R.notes.forEach(function(g){nb+='· 참고: ['+esc(g.kind)+'] '+(/사본|가져옴/.test(g.kind)?esc(g.samples.join(', ')):g.count+'건')+'<br>';});
     if(R.skipped.length) nb+='· 세금계산서 내용이 없어 제외한 파일 '+R.skipped.length+'개: '+esc(R.skipped.map(function(x){return x.split('/').pop();}).join(', '))+'<br>';
     if(R.errors.length) nb+='· 열 수 없는 파일 '+R.errors.length+'개: '+esc(R.errors.join(', '))+'<br>';
     if(R.images.length) nb+='· 사진·PDF '+R.images.length+'개는 읽지 않았습니다(담당자 직접 확인 대상).';
